@@ -8,7 +8,7 @@ Not very much. It can basically only add numbers, print things, use arguments, a
 Low-level systems development is the main target for Ltran. It could also be used for higher level systems development or networking.
 
 # Will it be updated to be able to do more in the future?
-Of course! Updates to Ltran with new features will be released nightly, with a few more procedures or major language features. When the language is in a more usable state, version 1.0 will be released. Until then, versions 0.1-0.9 will all have features that are very subject to change, and I do not recommend writing important programs in the language in it until then.
+Of course! Updates to Ltran with new features will be released nightly, with a few more procedures or major language features. When the language is in a more usable state, version 1.0 will be released. Until then, versions 0.1-0.9 will all have features that are very subject to change, and I do not recommend writing important programs in the language in it until then. Though, that's mainly what I'm going to be doing with it.
 
 # Why is part of the code filled with Doxygen comments, but the rest isn't?
 I got tired. I'll add them gradually.
@@ -19,5 +19,5 @@ I'm glad you (totally) asked! Open an issue on this GitHub page. Even if you did
 # I want a feature in Ltran. Can I submit a pull request?
 I'd prefer not, I'm mostly building Ltran to learn, but you can open issues for feature requests.
 
-# Where can I read the documentation for Ltrna?
+# Where can I read the documentation for Ltran?
 DOCS.md.
