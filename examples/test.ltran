@@ -1,0 +1,9 @@
+; complicated parentheses / arguments case test
+
+proc a with (setarg "a" i64) (setarg "b" i64) do
+    ret (add (fetchli "a") (fetchli "b"))
+corp
+
+proc main do
+    ret (a 1 2)
+corp
