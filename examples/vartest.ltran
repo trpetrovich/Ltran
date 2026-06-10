@@ -1,0 +1,12 @@
+; variable test for Ltran
+
+proc print (setarg "str" string) (setarg "len" i64) do
+    syscall 1 1 (strptr (fetchls "str")) (fetchli "len")
+    ret 1
+corp
+
+proc main do
+    set "test" "hello world" string
+    print (fetch "test" string)
+    ret 1
+corp
