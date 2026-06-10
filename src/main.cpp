@@ -417,7 +417,7 @@ std::vector<Procedure> Parser(std::string Content){
         Log::Error(true, "No tokens to parse! Compilation terminated.\n", -4);
     }
     for (auto line : ParsedTokens){
-        Log::DebugPrint(1, "Iterating through parsed tokens...");
+        Log::DebugPrint(1, "Iterating through parsed tokens...\n");
         if (line[0].Signature == "label" && !inproc){
             if (ubox<std::string>(line[0]) == "proc"){
                 Procedure proc;
@@ -486,7 +486,7 @@ std::vector<Procedure> Parser(std::string Content){
         }
         if (inproc) current_proc.content.push_back(line);
     }
-    Log::DebugPrint(1, "Finished parsing!");
+    Log::DebugPrint(1, "Finished parsing!\n");
     return procedures;
 }
 
@@ -521,11 +521,11 @@ int main(int argc, char* argv[]){
     llvm::cl::ParseCommandLineOptions(argc, argv);
     DebugLevel = Debug;
 
-    std::ifstream File((std::string(OutputFile)));
+    std::ifstream File((std::string(InputFile)));
     std::stringstream buffer;
     buffer << File.rdbuf();
     std::string file_txt = buffer.str();
-    Log::Print("Compilation beginning for "+OutputFile+"...\n");
+    Log::Print("Compilation beginning for "+InputFile+"...\n");
     llvm::LLVMContext ctx;
     GlobalContext = &ctx;
     auto module = std::make_unique<llvm::Module>("Ltran", ctx);
@@ -535,11 +535,6 @@ int main(int argc, char* argv[]){
     llvm::FunctionType* i32ty = llvm::FunctionType::get(builder.getInt64Ty(), false);
     llvm::Type* StringTy = llvm::PointerType::getUnqual(ctx);
     Log::Print("Compiling builtins...\n");
-
-    
-    //
-    // BUILT-INS vvv
-    //
 
     std::map<std::string, std::function<llvm::Function*()>> builtins = {
         {"fetchli", [&](){
@@ -606,6 +601,94 @@ int main(int argc, char* argv[]){
             local_builder.CreateRet(local_builder.CreateAdd(evil_variable, pure_variable));
             return add;
         }},
+        {"sub", [&](){
+            llvm::Function *sub = llvm::Function::Create(
+                llvm::FunctionType::get(
+                    llvm::Type::getInt64Ty(ctx),
+                    {llvm::Type::getInt64Ty(ctx), llvm::Type::getInt64Ty(ctx)},
+                    false
+                ),
+                llvm::Function::ExternalLinkage,
+                "sub",
+                module.get()
+            );
+
+            llvm::BasicBlock* entree = llvm::BasicBlock::Create(ctx, "_ltran_sub", sub);
+            llvm::IRBuilder<> local_builder(ctx);
+            local_builder.SetInsertPoint(entree);
+            
+            auto sub_args = sub->arg_begin();
+            llvm::Value* evil_variable = &*sub_args++;
+            llvm::Value* pure_variable = &*sub_args++;
+            local_builder.CreateRet(local_builder.CreateSub(evil_variable, pure_variable));
+            return sub;
+        }},
+        {"mul", [&](){
+            llvm::Function *mul = llvm::Function::Create(
+                llvm::FunctionType::get(
+                    llvm::Type::getInt64Ty(ctx),
+                    {llvm::Type::getInt64Ty(ctx), llvm::Type::getInt64Ty(ctx)},
+                    false
+                ),
+                llvm::Function::ExternalLinkage,
+                "mul",
+                module.get()
+            );
+
+            llvm::BasicBlock* entree = llvm::BasicBlock::Create(ctx, "_ltran_mul", mul);
+            llvm::IRBuilder<> local_builder(ctx);
+            local_builder.SetInsertPoint(entree);
+            
+            auto mul_args = mul->arg_begin();
+            llvm::Value* evil_variable = &*mul_args++;
+            llvm::Value* pure_variable = &*mul_args++;
+            local_builder.CreateRet(local_builder.CreateMul(evil_variable, pure_variable));
+            return mul;
+        }},
+        {"div", [&](){
+            llvm::Function *div = llvm::Function::Create(
+                llvm::FunctionType::get(
+                    llvm::Type::getInt64Ty(ctx),
+                    {llvm::Type::getInt64Ty(ctx), llvm::Type::getInt64Ty(ctx)},
+                    false
+                ),
+                llvm::Function::ExternalLinkage,
+                "mul",
+                module.get()
+            );
+
+            llvm::BasicBlock* entree = llvm::BasicBlock::Create(ctx, "_ltran_mul", div);
+            llvm::IRBuilder<> local_builder(ctx);
+            local_builder.SetInsertPoint(entree);
+            
+            auto mul_args = div->arg_begin();
+            llvm::Value* evil_variable = &*mul_args++;
+            llvm::Value* pure_variable = &*mul_args++;
+            local_builder.CreateRet(local_builder.CreateUDiv(evil_variable, pure_variable));
+            return div;
+        }},
+        {"mod", [&](){
+            llvm::Function *mod = llvm::Function::Create(
+                llvm::FunctionType::get(
+                    llvm::Type::getInt64Ty(ctx),
+                    {llvm::Type::getInt64Ty(ctx), llvm::Type::getInt64Ty(ctx)},
+                    false
+                ),
+                llvm::Function::ExternalLinkage,
+                "mul",
+                module.get()
+            );
+
+            llvm::BasicBlock* entree = llvm::BasicBlock::Create(ctx, "_ltran_mul", mod);
+            llvm::IRBuilder<> local_builder(ctx);
+            local_builder.SetInsertPoint(entree);
+            
+            auto mul_args = mod->arg_begin();
+            llvm::Value* evil_variable = &*mul_args++;
+            llvm::Value* pure_variable = &*mul_args++;
+            local_builder.CreateRet(local_builder.CreateURem(evil_variable, pure_variable));
+            return mod;
+        }},
         {"strptr", [&](){
             llvm::Function *strptr = llvm::Function::Create(
                 llvm::FunctionType::get(
@@ -629,6 +712,95 @@ int main(int argc, char* argv[]){
         }}
     };
 
+    std::map<std::string, std::function<llvm::Value*(std::vector<LtranObject>, llvm::IRBuilder<>*, Procedure, std::any)>> IntrinsicsRegistry = {
+        {"ret", [&](std::vector<LtranObject> Line, llvm::IRBuilder<>* builder, Procedure proc, std::any extra) -> llvm::Value* {
+            auto finish_call = std::any_cast<std::function<llvm::Value*(std::vector<LtranObject>)>>(extra);
+            // heh.. welcome back home, finish_call.
+            if (Line[1].Signature == "call"){
+                builder->CreateRet(
+                    finish_call(ubox<std::vector<LtranObject>>(Line[1]))
+                );
+            }
+            else if (proc.return_type == llvm::PointerType::getUnqual(ctx)){
+                builder->CreateRet(
+                    builder->CreateGlobalStringPtr(ubox<std::string>(Line[1]))
+                );
+            }
+            else if (proc.return_type == llvm::Type::getInt64Ty(ctx)){
+                builder->CreateRet(
+                    builder->getInt64((uint64_t)ubox<int>(Line[1]))
+                );
+            }
+            return builder->getInt64(0);
+        }},
+        {"set", [&](std::vector<LtranObject> Line, llvm::IRBuilder<>* builder, Procedure proc, std::any extra) -> llvm::Value* {
+            auto FinishCall = std::any_cast<std::function<llvm::Value*(std::vector<LtranObject>)>>(extra);
+            auto Name = ubox<std::string>(Line[1]);
+            auto Type = ubox<std::string>(Line[3]);
+            
+            auto *Variable = module->getNamedGlobal(Name);
+            if (!Variable){
+                if (Type == "i64"){
+                    Variable = new llvm::GlobalVariable(
+                        *module,
+                        llvm::Type::getInt64Ty(ctx),
+                        false,
+                        llvm::GlobalValue::ExternalLinkage,
+                        llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx),0),
+                        Name
+                    );       
+                }
+                else if (Type == "string"){
+                    Variable = new llvm::GlobalVariable(
+                        *module,
+                        llvm::PointerType::getUnqual(ctx),
+                        false,
+                        llvm::GlobalValue::ExternalLinkage,
+                        llvm::ConstantPointerNull::get(
+                            llvm::PointerType::getUnqual(ctx)
+                        ),
+                        Name
+                    );                    
+                }
+            }
+            llvm::Value* ValToStore;
+            if (Line[2].Signature == "call"){
+                ValToStore = FinishCall(ubox<std::vector<LtranObject>>(Line[2]));
+            } else {
+                if (Type == "i64"){
+                    ValToStore = llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), ubox<int>(Line[2]));
+                } else {
+                    ValToStore = builder->CreateGlobalStringPtr(ubox<std::string>(Line[2]));
+                }
+            }
+            if (Type == "i64"){
+                builder->CreateStore(
+                    ValToStore,
+                    Variable
+                );
+            }
+            else if (Type == "string"){
+                builder->CreateStore(
+                    ValToStore,
+                    Variable
+                );
+            }
+            return builder->getInt64(0);
+        }},
+        {"fetch", [&](std::vector<LtranObject> Line, llvm::IRBuilder<>* builder, Procedure proc, std::any extra) -> llvm::Value* {
+            auto LLVMVect = std::any_cast<std::vector<llvm::Value*>>(extra);
+            auto Name = ubox<std::string>(Line[1]);
+            auto Type = ubox<std::string>(Line[2]);
+            
+            auto *Variable = module->getNamedGlobal(Name);
+            if (Type == "i64"){
+                return builder->CreateLoad(llvm::Type::getInt64Ty(ctx), Variable, Name);
+            } else if (Type == "string"){
+                return builder->CreateLoad(llvm::PointerType::getUnqual(ctx), Variable, Name);
+            }
+            return builder->getInt64(0);
+        }}
+    };
     std::map<std::string, llvm::InlineAsm*> asm_builtins_registry = {};
     std::map<std::string, std::function<llvm::InlineAsm*()>> asm_builtins = {
         {"syscall", [&](){
@@ -682,9 +854,7 @@ int main(int argc, char* argv[]){
 
         return nullptr;
     };
-    //
-    // BUILT-INS ^^^
-    //
+
     auto parentheses_type_handler = [&](LtranObject Object){
         auto LtranObjectVector = ubox<std::vector<LtranObject>>(Object);
         auto fn_name = ubox<std::string>(LtranObjectVector[0]);
@@ -696,8 +866,10 @@ int main(int argc, char* argv[]){
     };
 
     auto llvmbuild = [&](this const auto& self, Procedure proc){
-        for (auto Line : proc.content){
-            if (Line[1].Signature == "call" && ubox<std::string>(Line[0]) == "ret"){
+        for (const auto& Line : proc.content) {
+            if (Line.size() >= 2 &&
+                ubox<std::string>(Line[0]) == "ret" &&
+                Line[1].Signature == "call"){
                 proc.return_type = parentheses_type_handler(Line[1]);
             }
         }
@@ -721,11 +893,12 @@ int main(int argc, char* argv[]){
 
             std::vector<llvm::Value*> llvmvect = {};
             // assume first is label for now. later, throw error if such is not true.
-            auto finish_call = [&proc_func, &builder, &module, &llvmvect, &proc, &gatedgetfn_asm, &gatedgetfn](this const auto& self, std::vector<LtranObject> objs) -> llvm::Value* {
+            std::function<llvm::Value*(std::vector<LtranObject>)>  finish_call = [&Line, &IntrinsicsRegistry, &proc_func, &builder, &module, &llvmvect, &proc, &gatedgetfn_asm, &gatedgetfn](this const auto& self, std::vector<LtranObject> objs) -> llvm::Value* {
                 auto name = ubox<std::string>(objs[0]);
                 
                 auto asm_func = gatedgetfn_asm(name);
                 auto func = gatedgetfn(name);
+                auto Intrinsic = gatedgetfn(name);
                 std::vector<llvm::Value*> arguments = {};
                 for (auto Object : objs) {
                     if (Object.Signature == "integer"){
@@ -749,28 +922,18 @@ int main(int argc, char* argv[]){
                             }
                             ++iter;
                         }
+                        return builder.CreateCall(func, arguments);
                     }
-                    return builder.CreateCall(func, arguments);
+                    else if (IntrinsicsRegistry.contains(name))
+                        return IntrinsicsRegistry[name](objs, &builder, proc, std::any(arguments));
+                    else
+                        return builder.CreateCall(func, arguments);
                 } else {
                     return builder.CreateCall(asm_func, arguments);
                 }
             };
-            if (ubox<std::string>(Line[0]) == "ret"){
-                if (Line[1].Signature == "call"){
-                    builder.CreateRet(
-                        finish_call(ubox<std::vector<LtranObject>>(Line[1]))
-                    );
-                }
-                else if (proc.return_type == llvm::PointerType::getUnqual(ctx)){
-                    builder.CreateRet(
-                        builder.CreateGlobalStringPtr(ubox<std::string>(Line[1]))
-                    );
-                }
-                else if (proc.return_type == llvm::Type::getInt64Ty(ctx)){
-                    builder.CreateRet(
-                        builder.getInt64((uint64_t)ubox<int>(Line[1]))
-                    );
-                }
+            if (IntrinsicsRegistry.contains(ubox<std::string>(Line[0]))) {
+                IntrinsicsRegistry[ubox<std::string>(Line[0])](Line, &builder, proc, std::any(finish_call));
                 continue;
             }
             llvm::Function *func = gatedgetfn(ubox<std::string>(Line[0]));
@@ -806,7 +969,7 @@ int main(int argc, char* argv[]){
                 builder.CreateCall(asm_func, llvmvect);
             }
     }};
-    Log::Print("Linking modules...");
+    Log::Print("Linking modules...\n");
     if (!ExposedFunctions.empty()){
         for (CLinkedProcedure linkproc : ExposedFunctions){
             llvm::Function::Create(
@@ -851,7 +1014,7 @@ int main(int argc, char* argv[]){
         llvm::raw_fd_ostream out("output.ll", ec);
 
         module->print(out, nullptr);
-        system("clang output.ll -o output -nodefaultlibs");
+        system("clang output.ll -o output");
         if (DebugLevel < 1) system("rm output.ll");
         Log::Print("All done with compilation!\n");
     } else {
