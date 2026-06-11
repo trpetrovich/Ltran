@@ -15,7 +15,7 @@ proc example with (setarg "a" i64) (setarg "b" i64) do
 corp
 ```
 
-Then use the directive `setarg` to set your arguments as either an integer, i.e. `i64`, or a `string`. Currently, all integer types are `i64` by default. There is no `i32`, `i16`, or `i8`.
+Then use the directive `setarg` to set your arguments as either an integer, i.e. `i64`, or a `string`. Currently, Integer types must be prepended with their type followed by a period.
 
 If you want to pipe the result of one function into an argument slot in another, use parentheses. Like in that function, `fetchli` returns the value of a variable by name. We operate that function on `a` and `b`, then pipe the result of both into `add`.
 
