@@ -5,5 +5,5 @@ proc a with (setarg "a" i64) (setarg "b" i64) do
 corp
 
 proc main do
-    ret (a 1 2)
+    ret (a i64.1 i64.2)
 corp
