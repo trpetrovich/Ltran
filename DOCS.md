@@ -3,7 +3,7 @@ Ltran's syntax is incredibly simple. The fundamental unit of computation is the 
 
 ```
 proc main do
-    ret 0
+    ret i64.0
 corp
 ```
 
@@ -24,10 +24,15 @@ If you want to pipe the result of one function into an argument slot in another,
 The current procedures and what they do are as follows:
 
 * add: Adds the two arguments and returns the result.
+* fadd: Adds two floating point numbers and returns the result.
 * sub: Subtracts the rhs from the lhs and returns the result.
+* fsub: Subtracts two floating point numbers and returns the result.
 * mul: Multiplies the two arguments and returns the result.
+* fmul: Multiplies two floating point numbers and returns the result.
 * div: Divides the lhs by the rhs and returns the result.
+* fdiv: Divides two floating point numbers and returns the result.
 * mod: Divides the lhs by the rhs and returns the remainder.
+* fmod: Divides two floating point numbers and returns the remainder.
 * strptr: Returns a string's memory address which can be used as a pointer.
 * fetchls: Returns a string argument by name.
 * fetchli: Returns an integer argument by name.
