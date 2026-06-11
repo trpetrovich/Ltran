@@ -185,8 +185,13 @@ class LtranObject {
         /**
         * @brief Actual type as a string.
         * @details The type of the object, as a string. The possible signatures are as follows:
-        * - 'integer'        : A 64 bit unsigned integer.
-        * - 'string'         : An unsigned eight bit integer pointer.
+        * - 'i64'            : A 64 bit integer, signed or unsigned based on operation.
+        * - 'i32'            : A 32 bit integer, signed or unsigned based on operation.
+        * - 'i16'            : A 16 bit integer, signed or unsigned based on operation.
+        * - 'i8'             : An 8 bit integer, signed or unsigned based on operation.
+        * - 'f32'            : A 32 bit floating point integer, signed or unsigned based on operation.
+        * - 'f64'            : A 64 bit floating point integer, signed or unsigned based on operation.
+        * - 'string'         : An eight bit integer pointer.
         * - 'call'           : A procedure call with a vector of LtranObjects..
         * - 'incompletecall' : A procedure call with a vector of strings that have yet to become objects..
         */
@@ -371,10 +376,19 @@ std::vector<Procedure> Parser(std::string Content){
             return LtranObject(std::any(IncompleteCallVector), "incompletecall");
         }
 
-        try {
-            std::stoi(Token);
-            return LtranObject(std::any(std::stoi(Token)), "integer");
-        } catch (std::exception &e) {
+        if (Token.starts_with("i64.")){
+            return LtranObject(std::any(static_cast<uint64_t>(std::stoull(Token.substr(4)))), "i64");
+        } else if (Token.starts_with("i32.")){
+            return LtranObject(std::any(static_cast<uint32_t>(std::stoull(Token.substr(4)))), "i32");
+        } else if (Token.starts_with("i16.")){
+            return LtranObject(std::any(static_cast<uint16_t>(std::stoul(Token.substr(4)))), "i16");
+        } else if (Token.starts_with("i8.")){
+            return LtranObject(std::any(static_cast<uint8_t>(std::stoul(Token.substr(4)))), "i8");
+        } else if (Token.starts_with("f32.")){
+            return LtranObject(std::any(std::stof(Token.erase(0,4))), "f32");
+        } else if (Token.starts_with("f64.")){
+            return LtranObject(std::any(std::stod(Token.erase(0,4))), "f64");
+        } else {
             return LtranObject(std::any(Token), "label");
         }
     };
@@ -432,6 +446,16 @@ std::vector<Procedure> Parser(std::string Content){
                             std::string x = ubox<std::string>(LtranObjectVector[2]);
                             if (x == "i64")
                                 proc.arg_types.push_back(llvm::Type::getInt64Ty(*GlobalContext));
+                            else if (x == "i32")
+                                proc.arg_types.push_back(llvm::Type::getInt32Ty(*GlobalContext));
+                            else if (x == "i16")
+                                proc.arg_types.push_back(llvm::Type::getInt16Ty(*GlobalContext));
+                            else if (x == "i8")
+                                proc.arg_types.push_back(llvm::Type::getInt8Ty(*GlobalContext));
+                            else if (x == "f32")
+                                proc.arg_types.push_back(llvm::Type::getFloatTy(*GlobalContext));
+                            else if (x == "f64")
+                                proc.arg_types.push_back(llvm::Type::getDoubleTy(*GlobalContext));
                             else if (x == "string")
                                 proc.arg_types.push_back(llvm::PointerType::getUnqual(*GlobalContext));
                         }
@@ -451,8 +475,18 @@ std::vector<Procedure> Parser(std::string Content){
             }
             if (line[1].Signature == "string"){
                 current_proc.return_type = llvm::PointerType::getUnqual(*GlobalContext);
-            } else if (line[1].Signature == "integer"){
+            } else if (line[1].Signature == "i64"){
                 current_proc.return_type = llvm::Type::getInt64Ty(*GlobalContext);
+            } else if (line[1].Signature == "i32"){
+                current_proc.return_type = llvm::Type::getInt32Ty(*GlobalContext);
+            } else if (line[1].Signature == "i16"){
+                current_proc.return_type = llvm::Type::getInt16Ty(*GlobalContext);
+            } else if (line[1].Signature == "i8"){
+                current_proc.return_type = llvm::Type::getInt8Ty(*GlobalContext);
+            } else if (line[1].Signature == "f32"){
+                current_proc.return_type = llvm::Type::getFloatTy(*GlobalContext);
+            } else if (line[1].Signature == "f64"){
+                current_proc.return_type = llvm::Type::getDoubleTy(*GlobalContext);
             } else if (line[1].Signature == "incompletecall"){
                 current_proc.return_type = llvm::Type::getInt64Ty(*GlobalContext);
             } 
@@ -472,6 +506,21 @@ std::vector<Procedure> Parser(std::string Content){
                     if (content == "i64"){
                         if (prevcontent == "ret") {linkproc.ReturnType = llvm::Type::getInt64Ty(*GlobalContext); break;}
                         else linkproc.ArgTypes.push_back(llvm::Type::getInt64Ty(*GlobalContext));
+                    } else if (content == "i32"){
+                        if (prevcontent == "ret") {linkproc.ReturnType = llvm::Type::getInt32Ty(*GlobalContext); break;}
+                        else linkproc.ArgTypes.push_back(llvm::Type::getInt32Ty(*GlobalContext));
+                    } else if (content == "i16"){
+                        if (prevcontent == "ret") {linkproc.ReturnType = llvm::Type::getInt16Ty(*GlobalContext); break;}
+                        else linkproc.ArgTypes.push_back(llvm::Type::getInt16Ty(*GlobalContext));
+                    } else if (content == "i8"){
+                        if (prevcontent == "ret") {linkproc.ReturnType = llvm::Type::getInt8Ty(*GlobalContext); break;}
+                        else linkproc.ArgTypes.push_back(llvm::Type::getInt8Ty(*GlobalContext));
+                    } else if (content == "f32"){
+                        if (prevcontent == "ret") {linkproc.ReturnType = llvm::Type::getFloatTy(*GlobalContext); break;}
+                        else linkproc.ArgTypes.push_back(llvm::Type::getFloatTy(*GlobalContext));
+                    } else if (content == "f64"){
+                        if (prevcontent == "ret") {linkproc.ReturnType = llvm::Type::getDoubleTy(*GlobalContext); break;}
+                        else linkproc.ArgTypes.push_back(llvm::Type::getDoubleTy(*GlobalContext));
                     } else if (content == "string"){
                         if (prevcontent == "ret") {linkproc.ReturnType = llvm::PointerType::getUnqual(*GlobalContext); break;}
                         else linkproc.ArgTypes.push_back(llvm::PointerType::getUnqual(*GlobalContext));
@@ -601,6 +650,28 @@ int main(int argc, char* argv[]){
             local_builder.CreateRet(local_builder.CreateAdd(evil_variable, pure_variable));
             return add;
         }},
+        {"fadd", [&](){
+            llvm::Function *fadd = llvm::Function::Create(
+                llvm::FunctionType::get(
+                    llvm::Type::getInt64Ty(ctx),
+                    {llvm::Type::getFloatTy(ctx), llvm::Type::getFloatTy(ctx)},
+                    false
+                ),
+                llvm::Function::ExternalLinkage,
+                "fadd",
+                module.get()
+            );
+
+            llvm::BasicBlock* entree = llvm::BasicBlock::Create(ctx, "_ltran_fadd", fadd);
+            llvm::IRBuilder<> local_builder(ctx);
+            local_builder.SetInsertPoint(entree);
+            
+            auto add_args = fadd->arg_begin();
+            llvm::Value* evil_variable = &*add_args++;
+            llvm::Value* pure_variable = &*add_args++;
+            local_builder.CreateRet(local_builder.CreateFAdd(evil_variable, pure_variable));
+            return fadd;
+        }},
         {"sub", [&](){
             llvm::Function *sub = llvm::Function::Create(
                 llvm::FunctionType::get(
@@ -622,6 +693,28 @@ int main(int argc, char* argv[]){
             llvm::Value* pure_variable = &*sub_args++;
             local_builder.CreateRet(local_builder.CreateSub(evil_variable, pure_variable));
             return sub;
+        }},
+        {"fsub", [&](){
+            llvm::Function *fsub = llvm::Function::Create(
+                llvm::FunctionType::get(
+                    llvm::Type::getInt64Ty(ctx),
+                    {llvm::Type::getFloatTy(ctx), llvm::Type::getFloatTy(ctx)},
+                    false
+                ),
+                llvm::Function::ExternalLinkage,
+                "fsub",
+                module.get()
+            );
+
+            llvm::BasicBlock* entree = llvm::BasicBlock::Create(ctx, "_ltran_sub", fsub);
+            llvm::IRBuilder<> local_builder(ctx);
+            local_builder.SetInsertPoint(entree);
+            
+            auto sub_args = fsub->arg_begin();
+            llvm::Value* evil_variable = &*sub_args++;
+            llvm::Value* pure_variable = &*sub_args++;
+            local_builder.CreateRet(local_builder.CreateFSub(evil_variable, pure_variable));
+            return fsub;
         }},
         {"mul", [&](){
             llvm::Function *mul = llvm::Function::Create(
@@ -645,6 +738,28 @@ int main(int argc, char* argv[]){
             local_builder.CreateRet(local_builder.CreateMul(evil_variable, pure_variable));
             return mul;
         }},
+        {"fmul", [&](){
+            llvm::Function *fmul = llvm::Function::Create(
+                llvm::FunctionType::get(
+                    llvm::Type::getInt64Ty(ctx),
+                    {llvm::Type::getFloatTy(ctx), llvm::Type::getFloatTy(ctx)},
+                    false
+                ),
+                llvm::Function::ExternalLinkage,
+                "fmul",
+                module.get()
+            );
+
+            llvm::BasicBlock* entree = llvm::BasicBlock::Create(ctx, "_ltran_fmul", fmul);
+            llvm::IRBuilder<> local_builder(ctx);
+            local_builder.SetInsertPoint(entree);
+            
+            auto mul_args = fmul->arg_begin();
+            llvm::Value* evil_variable = &*mul_args++;
+            llvm::Value* pure_variable = &*mul_args++;
+            local_builder.CreateRet(local_builder.CreateFMul(evil_variable, pure_variable));
+            return fmul;
+        }},
         {"div", [&](){
             llvm::Function *div = llvm::Function::Create(
                 llvm::FunctionType::get(
@@ -653,11 +768,11 @@ int main(int argc, char* argv[]){
                     false
                 ),
                 llvm::Function::ExternalLinkage,
-                "mul",
+                "div",
                 module.get()
             );
 
-            llvm::BasicBlock* entree = llvm::BasicBlock::Create(ctx, "_ltran_mul", div);
+            llvm::BasicBlock* entree = llvm::BasicBlock::Create(ctx, "_ltran_div", div);
             llvm::IRBuilder<> local_builder(ctx);
             local_builder.SetInsertPoint(entree);
             
@@ -666,6 +781,28 @@ int main(int argc, char* argv[]){
             llvm::Value* pure_variable = &*mul_args++;
             local_builder.CreateRet(local_builder.CreateUDiv(evil_variable, pure_variable));
             return div;
+        }},
+        {"fdiv", [&](){
+            llvm::Function *fdiv = llvm::Function::Create(
+                llvm::FunctionType::get(
+                    llvm::Type::getInt64Ty(ctx),
+                    {llvm::Type::getInt64Ty(ctx), llvm::Type::getInt64Ty(ctx)},
+                    false
+                ),
+                llvm::Function::ExternalLinkage,
+                "fdiv",
+                module.get()
+            );
+
+            llvm::BasicBlock* entree = llvm::BasicBlock::Create(ctx, "_ltran_fdiv", fdiv);
+            llvm::IRBuilder<> local_builder(ctx);
+            local_builder.SetInsertPoint(entree);
+            
+            auto mul_args = fdiv->arg_begin();
+            llvm::Value* evil_variable = &*mul_args++;
+            llvm::Value* pure_variable = &*mul_args++;
+            local_builder.CreateRet(local_builder.CreateFDiv(evil_variable, pure_variable));
+            return fdiv;
         }},
         {"mod", [&](){
             llvm::Function *mod = llvm::Function::Create(
@@ -689,6 +826,28 @@ int main(int argc, char* argv[]){
             local_builder.CreateRet(local_builder.CreateURem(evil_variable, pure_variable));
             return mod;
         }},
+        {"fmod", [&](){
+            llvm::Function *fmod = llvm::Function::Create(
+                llvm::FunctionType::get(
+                    llvm::Type::getInt64Ty(ctx),
+                    {llvm::Type::getInt64Ty(ctx), llvm::Type::getInt64Ty(ctx)},
+                    false
+                ),
+                llvm::Function::ExternalLinkage,
+                "mul",
+                module.get()
+            );
+
+            llvm::BasicBlock* entree = llvm::BasicBlock::Create(ctx, "_ltran_mul", fmod);
+            llvm::IRBuilder<> local_builder(ctx);
+            local_builder.SetInsertPoint(entree);
+            
+            auto mul_args = fmod->arg_begin();
+            llvm::Value* evil_variable = &*mul_args++;
+            llvm::Value* pure_variable = &*mul_args++;
+            local_builder.CreateRet(local_builder.CreateFRem(evil_variable, pure_variable));
+            return fmod;
+        }},
         {"strptr", [&](){
             llvm::Function *strptr = llvm::Function::Create(
                 llvm::FunctionType::get(
@@ -709,7 +868,25 @@ int main(int argc, char* argv[]){
             llvm::Value* evil_variable = &*args++;
             local_builder.CreateRet(local_builder.CreatePtrToInt(evil_variable, llvm::Type::getInt64Ty(*GlobalContext)));
             return strptr;
-        }}
+        }}/*
+        {"zigtest", [&](){
+            llvm::Function *zigtest = llvm::Function::Create(
+                llvm::FunctionType::get(
+                    llvm::Type::getInt64Ty(ctx),
+                    {llvm::Type::getInt64Ty(ctx), llvm::Type::getInt64Ty(ctx)},
+                    false
+                ),
+                llvm::Function::ExternalLinkage,
+                "zigtest",
+                module.get()
+            );
+            llvm::FunctionCallee zig = module->getOrInsertFunction("zigtest", llvm::FunctionType::get(
+                    llvm::Type::getInt64Ty(ctx),
+                    {llvm::Type::getInt64Ty(ctx), llvm::Type::getInt64Ty(ctx)},
+                    false
+                ));
+            return zigtest;
+        }}*/
     };
 
     std::map<std::string, std::function<llvm::Value*(std::vector<LtranObject>, llvm::IRBuilder<>*, Procedure, std::any)>> IntrinsicsRegistry = {
@@ -728,7 +905,7 @@ int main(int argc, char* argv[]){
             }
             else if (proc.return_type == llvm::Type::getInt64Ty(ctx)){
                 builder->CreateRet(
-                    builder->getInt64((uint64_t)ubox<int>(Line[1]))
+                    builder->getInt64(ubox<uint64_t>(Line[1]))
                 );
             }
             return builder->getInt64(0);
@@ -749,6 +926,51 @@ int main(int argc, char* argv[]){
                         llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx),0),
                         Name
                     );       
+                } else if (Type == "i32"){
+                    Variable = new llvm::GlobalVariable(
+                        *module,
+                        llvm::Type::getInt32Ty(ctx),
+                        false,
+                        llvm::GlobalValue::ExternalLinkage,
+                        llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx),0),
+                        Name
+                    );
+                } else if (Type == "i16"){
+                    Variable = new llvm::GlobalVariable(
+                        *module,
+                        llvm::Type::getInt16Ty(ctx),
+                        false,
+                        llvm::GlobalValue::ExternalLinkage,
+                        llvm::ConstantInt::get(llvm::Type::getInt16Ty(ctx),0),
+                        Name
+                    );
+                } else if (Type == "i8"){
+                    Variable = new llvm::GlobalVariable(
+                        *module,
+                        llvm::Type::getInt8Ty(ctx),
+                        false,
+                        llvm::GlobalValue::ExternalLinkage,
+                        llvm::ConstantInt::get(llvm::Type::getInt8Ty(ctx),0),
+                        Name
+                    );
+                } else if (Type == "f32"){
+                    Variable = new llvm::GlobalVariable(
+                        *module,
+                        llvm::Type::getFloatTy(ctx),
+                        false,
+                        llvm::GlobalValue::ExternalLinkage,
+                        llvm::ConstantInt::get(llvm::Type::getFloatTy(ctx),0),
+                        Name
+                    );
+                } else if (Type == "f64"){
+                    Variable = new llvm::GlobalVariable(
+                        *module,
+                        llvm::Type::getFloatTy(ctx),
+                        false,
+                        llvm::GlobalValue::ExternalLinkage,
+                        llvm::ConstantInt::get(llvm::Type::getDoubleTy(ctx),0),
+                        Name
+                    );
                 }
                 else if (Type == "string"){
                     Variable = new llvm::GlobalVariable(
@@ -768,23 +990,25 @@ int main(int argc, char* argv[]){
                 ValToStore = FinishCall(ubox<std::vector<LtranObject>>(Line[2]));
             } else {
                 if (Type == "i64"){
-                    ValToStore = llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), ubox<int>(Line[2]));
+                    ValToStore = llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), ubox<uint64_t>(Line[2]));
+                } else if (Type == "i32"){
+                    ValToStore = llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), ubox<uint32_t>(Line[2]));
+                } else if (Type == "i16"){
+                    ValToStore = llvm::ConstantInt::get(llvm::Type::getInt16Ty(ctx), ubox<uint16_t>(Line[2]));
+                } else if (Type == "i8"){
+                    ValToStore = llvm::ConstantInt::get(llvm::Type::getInt8Ty(ctx), ubox<uint8_t>(Line[2]));
+                } else if (Type == "f32"){
+                    ValToStore = llvm::ConstantInt::get(llvm::Type::getFloatTy(ctx), ubox<float>(Line[2]));
+                } else if (Type == "f64"){
+                    ValToStore = llvm::ConstantInt::get(llvm::Type::getFloatTy(ctx), ubox<double>(Line[2]));
                 } else {
                     ValToStore = builder->CreateGlobalStringPtr(ubox<std::string>(Line[2]));
                 }
             }
-            if (Type == "i64"){
-                builder->CreateStore(
-                    ValToStore,
-                    Variable
-                );
-            }
-            else if (Type == "string"){
-                builder->CreateStore(
-                    ValToStore,
-                    Variable
-                );
-            }
+            builder->CreateStore(
+                ValToStore,
+                Variable
+            );
             return builder->getInt64(0);
         }},
         {"fetch", [&](std::vector<LtranObject> Line, llvm::IRBuilder<>* builder, Procedure proc, std::any extra) -> llvm::Value* {
@@ -795,6 +1019,16 @@ int main(int argc, char* argv[]){
             auto *Variable = module->getNamedGlobal(Name);
             if (Type == "i64"){
                 return builder->CreateLoad(llvm::Type::getInt64Ty(ctx), Variable, Name);
+            } else if (Type == "i32"){
+                return builder->CreateLoad(llvm::Type::getInt32Ty(ctx), Variable, Name);
+            } else if (Type == "i16"){
+                return builder->CreateLoad(llvm::Type::getInt16Ty(ctx), Variable, Name);
+            } else if (Type == "i8"){
+                return builder->CreateLoad(llvm::Type::getInt8Ty(ctx), Variable, Name);
+            } else if (Type == "f32"){
+                return builder->CreateLoad(llvm::Type::getFloatTy(ctx), Variable, Name);
+            } else if (Type == "f64"){
+                return builder->CreateLoad(llvm::Type::getDoubleTy(ctx), Variable, Name);
             } else if (Type == "string"){
                 return builder->CreateLoad(llvm::PointerType::getUnqual(ctx), Variable, Name);
             }
@@ -901,8 +1135,18 @@ int main(int argc, char* argv[]){
                 auto Intrinsic = gatedgetfn(name);
                 std::vector<llvm::Value*> arguments = {};
                 for (auto Object : objs) {
-                    if (Object.Signature == "integer"){
-                        arguments.push_back(builder.getInt64((uint64_t)ubox<int>(Object)));
+                    if (Object.Signature == "i64"){
+                        arguments.push_back(builder.getInt64(ubox<uint64_t>(Object)));
+                    } else if (Object.Signature == "i32"){
+                        arguments.push_back(builder.getInt32(ubox<uint32_t>(Object)));
+                    } else if (Object.Signature == "i16"){
+                        arguments.push_back(builder.getInt16(ubox<uint16_t>(Object)));
+                    } else if (Object.Signature == "i8"){
+                        arguments.push_back(builder.getInt8(ubox<uint8_t>(Object)));
+                    } else if (Object.Signature == "f32"){
+                        arguments.push_back(llvm::ConstantFP::get(builder.getFloatTy(), ubox<float>(Object)));
+                    } else if (Object.Signature == "f64"){
+                        arguments.push_back(llvm::ConstantFP::get(builder.getDoubleTy(), ubox<float>(Object)));
                     } else if (Object.Signature == "string"){
                         arguments.push_back(builder.CreateGlobalStringPtr(ubox<std::string>(Object)));
                     } else if (Object.Signature == "call"){
@@ -947,9 +1191,29 @@ int main(int argc, char* argv[]){
             if (Line.size() != 1){
                 if (DEBUG)
                 for (int i=1; i<Line.size(); ++i){
-                    if (Line[i].Signature == "integer") {
+                    if (Line[i].Signature == "i64") {
                         llvmvect.push_back(
-                            builder.getInt64(ubox<int>(Line[i]))
+                            builder.getInt64(ubox<uint64_t>(Line[i]))
+                        );
+                    } else if (Line[i].Signature == "i32") {
+                        llvmvect.push_back(
+                            builder.getInt64(ubox<uint32_t>(Line[i]))
+                        );
+                    } else if (Line[i].Signature == "i16") {
+                        llvmvect.push_back(
+                            builder.getInt64(ubox<uint16_t>(Line[i]))
+                        );
+                    } else if (Line[i].Signature == "i8") {
+                        llvmvect.push_back(
+                            builder.getInt64(ubox<uint8_t>(Line[i]))
+                        );
+                    } else if (Line[i].Signature == "f32") {
+                        llvmvect.push_back(
+                            llvm::ConstantFP::get(builder.getFloatTy(), ubox<float>(Line[i]))
+                        );
+                    } else if (Line[i].Signature == "f64") {
+                        llvmvect.push_back(
+                            llvm::ConstantFP::get(builder.getDoubleTy(), ubox<float>(Line[i]))
                         );
                     }
                     else if (Line[i].Signature == "string") {
@@ -1014,7 +1278,9 @@ int main(int argc, char* argv[]){
         llvm::raw_fd_ostream out("output.ll", ec);
 
         module->print(out, nullptr);
-        system("clang output.ll -o output");
+        //system("clang output.ll -L$(pwd) -lltran -Wl,-rpath,$(pwd) -o output");
+        system("zig build-lib ltran.zig -dynamic -fPIC -target x86_64-linux-gnu");
+        system("zig cc output.ll -L. -lltran -o output");
         if (DebugLevel < 1) system("rm output.ll");
         Log::Print("All done with compilation!\n");
     } else {
